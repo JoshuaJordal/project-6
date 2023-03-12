@@ -54,8 +54,20 @@ def page_not_found(error):
 #   These return JSON, rather than rendering pages.
 #
 ###############
-@app.route("/_calc_times", methods=["POST"])
+
+@app.route("/_calc_times")
 def _calc_times():
+    app.logger.debug("Got a JSON request")
+    km = request.args.get('km', 999, type=float)
+    brevet = request.args.get('brevet', 200, int)
+    time = request.args.get('time')
+    open_time = acp_times.open_time(km, brevet, arrow.get(time)).format('YYYY-MM-DDTHH:mm')
+    close_time = acp_times.close_time(km, brevet, arrow.get(time)).format('YYYY-MM-DDTHH:mm')
+    result = {"open": open_time, "close": close_time}
+    return flask.jsonify(result=result)
+
+@app.route("/_insert_times", methods=["POST"])
+def _insert_times():
     """
     Calculates open/close times from miles, using rules
     described at https://rusa.org/octime_alg.html.
@@ -67,17 +79,19 @@ def _calc_times():
         brevet = int(input_json['brevet'])
         time = input_json["time"]
         checkpoints = input_json["checkpoints"]
+        valid = 1
 
         for checkpoint in checkpoints:
             km = int(checkpoint["distance"])
             if(km > (brevet * 1.2)):
-                requests.post(f"{API_URL}/brevets")
-                return flask.jsonify({"valid": 0})
+                valid = 0
             open_time = acp_times.open_time(km, brevet, arrow.get(time)).format('YYYY-MM-DDTHH:mm')
             close_time = acp_times.close_time(km, brevet, arrow.get(time)).format('YYYY-MM-DDTHH:mm')
             checkpoint["open_time"] = open_time
             checkpoint["close_time"] = close_time
         
+        if(not valid):
+            return flask.jsonify({"valid": 0})
         _id = requests.post(f"{API_URL}/brevets", json={"distance": brevet, "start_time": time, "checkpoints": checkpoints})
         app.logger.debug(flask.jsonify(result={}))
         return flask.jsonify(result={}, status=1)
@@ -88,7 +102,7 @@ def _calc_times():
                         status=0, 
                         mongo_id='None')
 
-@app.route("/_get_times")
+@app.route("/_get_times", methods=["POST"])
 def _get_times():
     try:
         races = requests.get(f"{API_URL}/brevets").json()

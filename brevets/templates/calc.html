@@ -120,9 +120,9 @@
             var TIME_CALC_URL = SCRIPT_ROOT + "/_calc_times";
             var TIME_GET_URL = SCRIPT_ROOT + "/_get_times";
             var CLEARDB_URL = SCRIPT_ROOT + "/_cleardb";
+            var INSERT_TIMES_URL = SCRIPT_ROOT + "/_insert_times";
 
-            function calc_times() {
-
+            function insert_times(control){
                var brevet = $('#brevet_dist_km').find(":selected").val();
                var time = $('#begin_date').val()
                let empty = true;
@@ -159,7 +159,7 @@
                   // Request method: POST
                   type: 'POST',
                   // URL: specified above
-                  url: TIME_CALC_URL,
+                  url: INSERT_TIMES_URL,
                   // Important step that we didn't use to do in P4:
                   // Convert our constructed dictionary to a JSON string!
                   data: JSON.stringify(new_insert),
@@ -169,14 +169,41 @@
                      // Recall: 1 was success, 0 was failure
                      if (data.status == 1) {
                            console.log("Successfully inserted! Response: ", data);
+                           $('.notes').html("");
                      }
                      else {
                            console.log("Insertion failed: ", data);
+                           $('.notes').first().html("One of your controls was out of range. Last valid brevet will be displayed")
                      }
                   },
                   // On error
                   error: function(err){
                   console.log("Error: ", err); }
+               });
+            }
+
+            function calc_times(control) {
+
+              var km = control.find("input[name='km']").val();
+              var open_time_field = control.find("input[name='open']");
+              var close_time_field = control.find("input[name='close']");
+              var brevet = $('#brevet_dist_km').find(":selected").val();
+              var time = $('#begin_date').val()
+
+              $.getJSON(TIME_CALC_URL, {km: km, brevet: brevet, time: time}).done(
+                function(data) {
+                   var times = data.result;
+                   console.log("Got a response: ");
+                   console.log("Response.open = " + times.open);
+                   // This part will automatically fill the open and close slots,
+                   // so don't worry about those.
+                   open_time_field.val(moment(times.open).format("YYYY-MM-DDTHH:mm"));
+                   close_time_field.val(moment(times.close).format("YYYY-MM-DDTHH:mm"));
+                 }
+               ).fail(function(err){
+                 // In case you get an error...
+                 console.log("Error!");
+                 console.log(err);
                });
             }
 
@@ -190,8 +217,17 @@
               var time = $('#begin_date');
               var locations = $("input[name='location']");
               console.log("get_times ran");
-              $.getJSON(TIME_GET_URL).done(
-                function(data) {
+              $.ajax({
+                  // Expect JSON responses from our backend
+                  dataType: 'json', // expected output format (getJSON sets this as well)
+                  // Specify we're sending JSON as well
+                  contentType: "application/json",
+                  // Request method: POST
+                  type: 'POST',
+                  // URL: specified above
+                  url: TIME_GET_URL,
+                  // On a successful response from flask:
+                  success: function(data) {
                    var result = data.result;
                    times = result.checkpoints
                    brevet = result.brevet
@@ -210,11 +246,10 @@
                      miles_fields[i].value = (0.621371 * times[i].distance).toFixed(6);
                      locations[i].value = times[i].location;
                    }
-                 }
-               ).fail(function(err){
-                 // In case you get an error...
-                 console.log("Error!");
-                 console.log(err);
+                  },
+                  // On error
+                  error: function(err){
+                  console.log("Error: ", err); }
                });
             }
 
@@ -229,6 +264,7 @@
                        var control_entry = $(this).parents(".control")
                        var target = control_entry.find("input[name='km']");
                        target.val( km );
+                       calc_times(control_entry);
                     });
 
                 $('input[name="km"]').change(
@@ -239,10 +275,21 @@
                        var control_entry = $(this).parents(".control")
                        var target = control_entry.find("input[name='miles']");
                        target.val( miles );
+                       calc_times(control_entry);
                     });
                   $('#submit').click(
-                     function(){
-                        calc_times();
+                     function(e){
+                        e.preventDefault();
+                        insert_times();
+                        //make sure to wait until inserts are done to clear
+                        setTimeout(()=>{
+                           $("input[name='open']").val('');
+                           $("input[name='close']").val('');
+                           $("input[name='km']").val('');
+                           $("input[name='miles']").val('');
+                           $('#brevet_dist_km').val('');
+                           $('#begin_date').val('');
+                        }, 200);
                      }
                   );
                   $('#display').click(
