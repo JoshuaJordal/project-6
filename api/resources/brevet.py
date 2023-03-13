@@ -19,18 +19,6 @@ class Brevet(Resource):
     def put(self, _id):
         input_json = request.json
 
-        distance = input_json["distance"]
-        location = input_json["locaiton"]
-        open = input_json["open"]
-        close = input_json["close"]
-        checkpoints = input_json["checkpoints"]
-
-        result = Brevet.objects(id=_id).update(
-            set__distance=distance,
-            set__location=location, 
-            set__open=open, 
-            set__close=close, 
-            set__checkpoints=checkpoints
-            )
+        result = Brevet.objects.get(id=_id).update(**input_json)
         
         return {'_id': str(result.id)}, 200
