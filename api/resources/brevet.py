@@ -7,7 +7,7 @@ from flask_restful import Resource
 # You need to implement this in database/models.py
 from database.models import Brevet
 
-class Brevet(Resource):
+class BrevetRes(Resource):
     def get(self, _id):
         json_object = Brevet.objects(id=_id).to_json()
         return Response(json_object, mimetype="application/json", status=200)
