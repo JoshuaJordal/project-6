@@ -16,10 +16,10 @@ class Brevets(Resource):
     def post(self):
         input_json = request.json
 
-        distance = input_json["distance"]
+        length = input_json["length"]
         start_time = input_json["start_time"]
         checkpoints = input_json["checkpoints"]
         Brevet.objects().delete() #clear db before inserting
-        result = Brevet(length=distance, start_time=start_time, checkpoints=checkpoints).save()
+        result = Brevet(length=length, start_time=start_time, checkpoints=checkpoints).save()
         return {'_id': str(result.id)}, 200
     

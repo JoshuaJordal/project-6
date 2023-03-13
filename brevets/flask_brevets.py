@@ -92,7 +92,7 @@ def _insert_times():
         
         if(not valid):
             return flask.jsonify({"valid": 0})
-        _id = requests.post(f"{API_URL}/brevets", json={"distance": brevet, "start_time": time, "checkpoints": checkpoints})
+        _id = requests.post(f"{API_URL}/brevets", json={"length": brevet, "start_time": time, "checkpoints": checkpoints})
         app.logger.debug(flask.jsonify(result={}))
         return flask.jsonify(result={}, status=1)
     
